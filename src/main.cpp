@@ -1,12 +1,12 @@
-#include <netinet/in.h>
-#include <switch.h>
-#include <dirent.h>
 #include <iostream>
 #include "upload.hpp"
 #include "utils.hpp"
 #include "config.hpp"
 #include "logger.hpp"
 #include "project.h"
+#include <netinet/in.h>
+#include <switch.h>
+#include <dirent.h>
 
 #define INNER_HEAP_SIZE 0x50000
 
@@ -156,29 +156,30 @@ int main(int argc, char **argv) {
     Logger::get().info() << "Current last item: " << lastItem << std::endl;
     Logger::get().close();
 
+    auto last_time = std::filesystem::file_time_type::clock::now();
     size_t fs;
     while (true) {
-        tmpItem = getLastAlbumItem();
-        if (lastItem.compare(tmpItem) < 0) {
-            fs = filesize(tmpItem);
+        auto items = getAlbumItemsPastTimestamp(last_time);
+        for (auto &tmpItem : items) {
+            fs = filesize(tmpItem.string());
             if (fs > 0) {
                 Logger::get().info() << "=============================" << std::endl;
                 Logger::get().info() << "New item found: " << tmpItem << std::endl;
                 Logger::get().info() << "Filesize: " << fs << std::endl;
                 bool sent = false;
                 for (int i=0; i<3; i++) {
-                    sent = sendFileToServer(tmpItem, fs);
+                    sent = sendFileToServer(tmpItem.string(), fs);
                     if (sent)
                         break;
                 }
-                lastItem = tmpItem;
+                last_time = std::max(last_time, std::filesystem::last_write_time(tmpItem));
                 if (!sent)
                     Logger::get().error() << "Unable to send file after 3 retries" << std::endl;
             }
 
-            Logger::get().close();
         }
 
+        Logger::get().close();
 		svcSleepThread(1e+9);
     }
 }

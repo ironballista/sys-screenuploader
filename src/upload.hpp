@@ -3,4 +3,4 @@
 #include <string>
 #include "config.hpp"
 
-bool sendFileToServer(std::string &path, size_t size);
+bool sendFileToServer(const std::string &path, size_t size);

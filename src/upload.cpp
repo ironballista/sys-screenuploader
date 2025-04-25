@@ -29,7 +29,7 @@ static size_t _uploadReadFunction(void *ptr, size_t size, size_t nmemb, void *da
     return 0;
 }
 
-bool sendFileToServer(std::string &path, size_t size) {
+bool sendFileToServer(const std::string &path, size_t size) {
     std::string tid = path.substr(path.length() - 36, 32);
     Logger::get().debug() << "Title ID: " << tid << std::endl;
     if (!Config::get().uploadAllowed(tid, path.back() == '4')) {

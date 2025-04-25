@@ -10,12 +10,36 @@
 
 namespace fs = std::filesystem;
 
-std::string getAlbumPath() {
+constexpr std::string getAlbumPath() {
     return "img:/";
 }
 
-bool isDigitsOnly(const std::string &str) {
+constexpr bool isDigitsOnly(const std::string &str) {
     return str.find_first_not_of("0123456789") == std::string::npos;
+}
+
+std::vector<fs::path> getAlbumItemsPastTimestamp(fs::file_time_type since) {
+    // Iterate over all directory entries under the `img` path
+    // Filter out those which do not satisfy basic criteria
+    // Filter out those whose last write time is older than `since`
+    auto albumItems =
+    std::views::all(fs::recursive_directory_iterator(getAlbumPath()))
+        | std::views::filter([=] (const fs::directory_entry &it) {
+            return it.is_regular_file() && it.last_write_time() > since;
+        })
+        | std::views::transform([] (const fs::directory_entry &it) {
+            return it.path();
+        })
+        | std::views::join;
+
+    // Add them all to a vector
+    auto v = std::vector<fs::path>();
+    for (auto &it : albumItems) {
+        v.push_back(it);
+    }
+
+    // Return the vector
+    return v;
 }
 
 std::vector<fs::directory_entry> getAlbumItemsPastDate(int year, int month, int day) {
@@ -103,7 +127,7 @@ std::string getLastAlbumItem() {
     return files.back();
 }
 
-size_t filesize(std::string &path) {
+size_t filesize(const std::string &path) {
     std::streampos begin, end;
     std::ifstream f(path, std::ios::binary);
     begin = f.tellg();
