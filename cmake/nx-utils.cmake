@@ -1,7 +1,3 @@
-if (NOT SWITCH)
-    cmake_panic("These utils can only be used if you are using the Switch toolchain file.")
-endif ()
-
 #############
 ## ELF2NRO ##
 #############

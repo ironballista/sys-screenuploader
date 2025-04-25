@@ -61,8 +61,6 @@ extern "C" {
             fatalThrow(rc);
 
         SocketInitConfig sockConf = {
-            .bsdsockets_version = 1,
-
             .tcp_tx_buf_size = 0x800,
             .tcp_rx_buf_size = 0x1000,
             .tcp_tx_buf_max_size = 0x2EE0,

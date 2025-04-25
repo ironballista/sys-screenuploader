@@ -5,20 +5,26 @@
 # libnx CMake template for Nintendo Switch homebrew development.
 
 cmake_minimum_required(VERSION 3.12)
+
+set(HAVE_FLAG_SEARCH_PATHS_FIRST 0)
 project(screenuploader)
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS 0)
+set(APPLE FALSE)
+cmake_policy(SET CMP0175 OLD)
 
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 include(devkita64-libnx.cmake)
 include(options)
 include(utils)
+include(devkitA64-libnx.cmake)
 
 find_package(LIBNX REQUIRED)
 find_package(CURL REQUIRED)
 find_package(ZLIB REQUIRED)
 #find_package(MbedTLS REQUIRED)
 #find_package(LIBTWILI REQUIRED)
+
 if (NOT LIBNX_FOUND)
     cmake_panic("Unable to detect libnx on this system.")
 endif ()
@@ -28,6 +34,9 @@ endif ()
 if (NOT ZLIB_FOUND)
     cmake_panic("Unable to detect zlib on this system.")
 endif ()
+#if (NOT MbedTLS_FOUND)
+    #cmake_panic("Unable to detect mbedtls on this system.")
+#endif ()
 if (NOT MbedTLS_FOUND)
     # cmake_panic("Unable to detect mbedtls on this system.")
 endif ()
@@ -77,6 +86,7 @@ cmake_info("Building ${APP_TITLE} version ${APP_VERSION}.")
 include(include/CMakeLists.txt)
 include(src/CMakeLists.txt)
 
+#target_include_directories(${HOMEBREW_APP}.elf PUBLIC /opt/devkitpro/portlibs/switch/include)
 target_link_libraries(${HOMEBREW_APP}.elf ${CURL_LIBRARIES} ${MBEDTLS_LIBRARIES} ${ZLIB_LIBRARIES} switch::libnx)
 set_target_properties(${HOMEBREW_APP}.elf PROPERTIES
         LINKER_LANGUAGE CXX # Replace this with C if you have C source files

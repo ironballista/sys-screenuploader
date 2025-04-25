@@ -6,9 +6,9 @@
 #
 # It also adds an imported target named `switch::libnx`.
 
-if (NOT SWITCH)
-    cmake_panic("This helper can only be used if you are using the Switch toolchain file.")
-endif ()
+# if (NOT SWITCH)
+    # cmake_panic("This helper can only be used if you are using the Switch toolchain file.")
+# endif ()
 
 set(LIBNX_PATHS $ENV{LIBNX} libnx ${LIBNX} ${DEVKITPRO}/libnx)
 
