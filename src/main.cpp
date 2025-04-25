@@ -1,4 +1,5 @@
 #include <iostream>
+#include <queue>
 #include "upload.hpp"
 #include "utils.hpp"
 #include "config.hpp"
@@ -150,31 +151,43 @@ int main(int argc, char **argv) {
     }
     Logger::get().info() << "Mounted " << (storage ? "SD" : "NAND") << " storage" << std::endl;
 
-    std::string tmpItem, lastItem = getLastAlbumItem();
+    std::string lastItem = getLastAlbumItem();
     Logger::get().info() << "Current last item: " << lastItem << std::endl;
     Logger::get().close();
 
     auto last_time = std::filesystem::file_time_type::clock::now();
-    size_t fs;
+    auto send_queue = std::queue<std::string>{};
+
     while (true) {
         auto items = getAlbumItemsPastTimestamp(last_time);
-        for (auto &tmpItem : items) {
-            fs = filesize(tmpItem.string());
+        for (const auto &tmpItem : items) {
+            const size_t fs = filesize(tmpItem.string());
             if (fs > 0) {
                 Logger::get().info() << "=============================" << std::endl;
                 Logger::get().info() << "New item found: " << tmpItem << std::endl;
                 Logger::get().info() << "Filesize: " << fs << std::endl;
-                bool sent = false;
-                for (int i=0; i<3; i++) {
-                    sent = sendFileToServer(tmpItem.string(), fs);
-                    if (sent)
-                        break;
-                }
-                last_time = std::max(last_time, std::filesystem::last_write_time(tmpItem));
-                if (!sent)
-                    Logger::get().error() << "Unable to send file after 3 retries" << std::endl;
-            }
 
+                send_queue.push(tmpItem.string());
+            }
+        }
+
+        if(!send_queue.empty()) {
+            const auto filename = send_queue.front();
+            const size_t fs = filesize(filename);
+            bool sent = false;
+
+            for (int i = 0; i < 3; i++) {
+                sent = sendFileToServer(filename, fs);
+                if (sent)
+                    break;
+            }
+            
+            if (!sent) {
+                Logger::get().error() << "Unable to send file after 3 retries" << std::endl;
+            } else {
+                last_time = std::max(last_time, std::filesystem::last_write_time(filename));
+                send_queue.pop();
+            }
         }
 
         Logger::get().close();

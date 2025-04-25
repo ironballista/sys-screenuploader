@@ -74,7 +74,7 @@ std::vector<fs::directory_entry> getAlbumItemsPastDate(int year, int month, int 
         return path.path().filename().string() >= sDay;
     };
 
-    auto explore_dir = [&](const fs::directory_entry &path) {
+    auto explore_dir = [](const fs::directory_entry &path) {
         return fs::directory_iterator(path);
     };
 
