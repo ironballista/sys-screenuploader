@@ -1,5 +1,6 @@
 #include <iostream>
 #include <queue>
+#include <unordered_set>
 #include "upload.hpp"
 #include "utils.hpp"
 #include "config.hpp"
@@ -155,38 +156,47 @@ int main(int argc, char **argv) {
     Logger::get().info() << "Current last item: " << lastItem << std::endl;
     Logger::get().close();
 
-    auto last_time = std::filesystem::file_time_type::clock::now();
+    const auto last_time = std::filesystem::last_write_time(lastItem);
+
     auto send_queue = std::queue<std::string>{};
+    auto sent_files = std::unordered_set<std::string>{};
+    auto queued_files = std::unordered_set<std::string>{};
 
     while (true) {
-        auto items = getAlbumItemsPastTimestamp(last_time);
+        const auto items = getAlbumItemsPastTimestamp(last_time);
         for (const auto &tmpItem : items) {
-            const size_t fs = filesize(tmpItem.string());
-            if (fs > 0) {
-                Logger::get().info() << "=============================" << std::endl;
-                Logger::get().info() << "New item found: " << tmpItem << std::endl;
-                Logger::get().info() << "Filesize: " << fs << std::endl;
+            const auto filepath = std::filesystem::absolute(tmpItem).string().substr(1);
+            const size_t fs = filesize(filepath);
+            if (fs > 0 && !sent_files.contains(filepath) && !queued_files.contains(filepath)) {
+                Logger::get().info()
+                    << "=============================\n"
+                    << "New item found: " << filepath << "\n"
+                    << "Filesize: " << fs << std::endl;
 
-                send_queue.push(tmpItem.string());
+                send_queue.push(filepath);
+                queued_files.insert(filepath);
             }
         }
 
-        if(!send_queue.empty()) {
-            const auto filename = send_queue.front();
+        while(!send_queue.empty()) {
+            const auto &filename = send_queue.front();
             const size_t fs = filesize(filename);
             bool sent = false;
+
+            Logger::get().info() << "Uploading " << filename << "..." << std::endl;
 
             for (int i = 0; i < 3; i++) {
                 sent = sendFileToServer(filename, fs);
                 if (sent)
                     break;
             }
-            
-            if (!sent) {
-                Logger::get().error() << "Unable to send file after 3 retries" << std::endl;
-            } else {
-                last_time = std::max(last_time, std::filesystem::last_write_time(filename));
+
+            if (sent) {
+                sent_files.insert(filename);
+                queued_files.erase(filename);
                 send_queue.pop();
+            } else {
+                Logger::get().error() << "Unable to send file after 3 retries" << std::endl;
             }
         }
 

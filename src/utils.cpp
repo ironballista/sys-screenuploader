@@ -22,24 +22,37 @@ std::vector<fs::path> getAlbumItemsPastTimestamp(fs::file_time_type since) {
     // Iterate over all directory entries under the `img` path
     // Filter out those which do not satisfy basic criteria
     // Filter out those whose last write time is older than `since`
-    auto albumItems =
-    std::views::all(fs::recursive_directory_iterator(getAlbumPath()))
-        | std::views::filter([=] (const fs::directory_entry &it) {
-            return it.is_regular_file() && it.last_write_time() > since;
-        })
-        | std::views::transform([] (const fs::directory_entry &it) {
-            return it.path();
-        })
-        | std::views::join;
+    std::vector<std::string> years, months, days;
+    auto files = std::vector<fs::path>{};
 
-    // Add them all to a vector
-    auto v = std::vector<fs::path>();
-    for (auto &it : albumItems) {
-        v.push_back(it);
-    }
+    std::string albumPath = getAlbumPath();
+    if (!fs::is_directory(albumPath)) return {};
 
-    // Return the vector
-    return v;
+    for (auto &entry : fs::directory_iterator(albumPath))
+        if (entry.is_directory() && isDigitsOnly(entry.path().filename()) && entry.path().filename().string().length() == 4)
+            years.push_back(entry.path());
+    if (years.empty()) return {};
+    sort(years.begin(), years.end());
+
+    for (auto &entry : fs::directory_iterator(years.back()))
+        if (entry.is_directory() && isDigitsOnly(entry.path().filename()) && entry.path().filename().string().length() == 2)
+            months.push_back(entry.path());
+    if (months.empty()) return {};
+    sort(months.begin(), months.end());
+
+    for (auto &entry : fs::directory_iterator(months.back()))
+        if (entry.is_directory() && isDigitsOnly(entry.path().filename()) && entry.path().filename().string().length() == 2)
+            days.push_back(entry.path());
+    if (days.empty()) return {};
+    sort(days.begin(), days.end());
+
+    auto ec = std::error_code{};
+
+    for (auto &entry : fs::directory_iterator(days.back()))
+        if (entry.is_regular_file() && entry.last_write_time(ec) > since && !ec)
+            files.push_back(entry.path());
+
+    return files;
 }
 
 std::vector<fs::directory_entry> getAlbumItemsPastDate(int year, int month, int day) {
